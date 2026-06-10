@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>車隊預約服務</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;}
+    body{background:#0f1b33;font-family:system-ui,-apple-system,"PingFang TC","Microsoft JhengHei",sans-serif;color:#1c2430;-webkit-text-size-adjust:100%;}
+    button{font-family:inherit;cursor:pointer;border:none;}
+    .wrap{max-width:560px;margin:0 auto;background:#f4f6fa;min-height:100vh;}
+    .hero{background:linear-gradient(160deg,#0f1b33,#060c18);color:#fff;padding:22px 18px 26px;}
+    .hero .t{font-size:20px;font-weight:800;letter-spacing:1px;}
+    .hero .t b{color:#d4af37;}
+    .hero .s{font-size:13px;opacity:.8;margin-top:4px;}
+    .banner{margin:12px 16px 0;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.6;}
+    .banner.warn{background:#fff6e0;color:#8a6300;border:1px solid #f0d488;}
+    .banner.ok{background:#e3f6ec;color:#1f7a47;border:1px solid #b6e3c8;}
+    .sec{background:#fff;margin:14px 16px;border-radius:14px;padding:16px;border:1px solid #e4e8ef;}
+    .sec h3{margin:0 0 12px;font-size:15px;color:#0f1b33;}
+    label{display:block;font-size:13px;color:#6b7480;margin:10px 0 5px;}
+    input,select,textarea{width:100%;padding:11px 12px;border:1px solid #e4e8ef;border-radius:10px;outline:none;font-size:15px;background:#fff;color:#1c2430;}
+    input:focus,select:focus,textarea:focus{border-color:#0f1b33;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .svc{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .svc button{padding:12px;border:1px solid #e4e8ef;background:#fff;border-radius:10px;font-size:14px;color:#1c2430;}
+    .svc button.on{border-color:#d4af37;background:#fff8e6;color:#0f1b33;font-weight:700;}
+    .stop-row{display:flex;gap:8px;margin-bottom:8px;}
+    .stop-row .x{flex:0 0 auto;background:#fbe6e1;color:#c9472f;border-radius:10px;padding:0 14px;font-weight:700;}
+    .addstop{width:100%;padding:10px;border:1px dashed #b9c2d0;border-radius:10px;background:#fff;color:#0f1b33;font-size:14px;}
+    .cars{display:grid;gap:12px;}
+    .car{border:1px solid #e4e8ef;border-radius:14px;overflow:hidden;background:#fff;}
+    .car.on{border-color:#d4af37;box-shadow:0 0 0 2px #d4af37 inset;}
+    .car .cover{width:100%;height:180px;object-fit:cover;display:block;background:#e4e8ef;}
+    .car .body{padding:12px 14px;}
+    .car .nm{font-size:16px;font-weight:800;color:#0f1b33;}
+    .car .in{font-size:13px;color:#6b7480;margin:4px 0 8px;}
+    .car .meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#43506a;margin-bottom:10px;}
+    .car .meta span{background:#eef2f9;padding:3px 9px;border-radius:999px;}
+    .car .btns{display:flex;gap:8px;}
+    .car .btns button{flex:1;padding:10px;border-radius:10px;font-size:14px;font-weight:700;}
+    .car .view{background:#eef2f9;color:#0f1b33;}
+    .car .pick{background:#0f1b33;color:#fff;}
+    .car .pick.on{background:#d4af37;color:#222;}
+    .submit{margin:8px 16px 40px;}
+    .submit button{width:100%;padding:15px;background:#d4af37;color:#1c2430;border-radius:12px;font-size:17px;font-weight:800;}
+    .submit button:disabled{opacity:.5;}
+    .err{color:#c9472f;font-size:13px;text-align:center;margin-top:8px;min-height:18px;}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:60;flex-direction:column;}
+    .modal.show{display:flex;}
+    .modal img{max-width:92vw;max-height:74vh;border-radius:10px;}
+    .modal .row{display:flex;gap:8px;margin-top:12px;}
+    .modal .row button{padding:9px 16px;border-radius:10px;background:#fff;color:#222;font-weight:700;}
+    .modal .thumbs{display:flex;gap:8px;margin-top:12px;overflow-x:auto;max-width:92vw;}
+    .modal .thumbs img{width:64px;height:48px;object-fit:cover;border-radius:6px;opacity:.6;}
+    .modal .thumbs img.on{opacity:1;outline:2px solid #d4af37;}
+    .success{padding:50px 24px;text-align:center;color:#0f1b33;}
+    .success .ic{font-size:46px;}
+    .success h2{margin:14px 0 8px;}
+    .success p{color:#43506a;font-size:14px;line-height:1.8;}
+    .hp{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="t">車隊<b>預約</b>服務</div>
+    <div class="s">填寫需求後，專人將為您確認車款、路線、時間與費用</div>
+  </div>
+  <div id="lineBanner"></div>
+
+  <div id="form">
+    <div class="sec">
+      <h3>服務項目</h3>
+      <div class="svc" id="svc"></div>
+    </div>
+
+    <div class="sec">
+      <h3>聯絡資料</h3>
+      <label>姓名</label><input id="f_name" placeholder="您的稱呼" autocomplete="name">
+      <label>電話</label><input id="f_phone" type="tel" placeholder="聯絡電話" autocomplete="tel">
+    </div>
+
+    <div class="sec">
+      <h3>用車時間與地點</h3>
+      <div class="grid2">
+        <div><label>用車日期</label><input id="f_date" type="date"></div>
+        <div><label>上車時間</label><input id="f_time" type="time"></div>
+      </div>
+      <label>上車地點</label><input id="f_pickup" placeholder="例：台北市內湖區…">
+      <label>其他行程點（可新增多個）</label>
+      <div id="stops"></div>
+      <button class="addstop" id="addStop">＋ 新增行程點</button>
+    </div>
+
+    <div class="sec">
+      <h3>人數與行李</h3>
+      <div class="grid2">
+        <div><label>乘車人數</label><input id="f_people" type="number" min="1" placeholder="人數"></div>
+        <div><label>行李數</label><input id="f_luggage" type="number" min="0" placeholder="件數"></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h3>選擇車款</h3>
+      <div class="cars" id="cars"><div class="banner">請先在上方選擇服務項目，即可看到可預約車款。</div></div>
+    </div>
+
+    <div class="sec">
+      <h3>其他需求</h3>
+      <label>寵物需求</label>
+      <select id="f_pet"><option>無</option><option>小型寵物(籠/提袋內)</option><option>10公斤以下</option><option>10公斤以上/需占座</option></select>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+        <input type="checkbox" id="f_child" style="width:auto;"> 需要兒童座椅
+      </label>
+      <div class="grid2" style="margin-top:6px;">
+        <div><label>航班編號（接送機填）</label><input id="f_flightno" placeholder="例：BR123"></div>
+        <div><label>航班時間</label><input id="f_flighttime" placeholder="例：14:30"></div>
+      </div>
+      <label>備註 / 特殊需求</label><textarea id="f_note" rows="2" placeholder="其他想說明的事項"></textarea>
+    </div>
+
+    <!-- 蜜罐：人眼看不到，機器人會亂填，被填就擋掉 -->
+    <input class="hp" id="hp" tabindex="-1" autocomplete="off" placeholder="請勿填寫">
+
+    <div class="submit">
+      <button id="submitBtn">送出預約需求</button>
+      <div class="err" id="err"></div>
+    </div>
+  </div>
+
+  <div id="successView" style="display:none;"></div>
+</div>
+
+<div class="modal" id="modal">
+  <img id="modalImg" src="">
+  <div class="thumbs" id="modalThumbs"></div>
+  <div class="row">
+    <button onclick="openOriginal()">查看原圖</button>
+    <button onclick="closeModal()">關閉</button>
+  </div>
+</div>
+
+<script>
+  /* ===== 你的 GAS Web App 網址（已填好） ===== */
+  var GAS_URL = "https://script.google.com/macros/s/AKfycbzCI7i6GrvETU-6DOxcqeMYc_rqY244L28guN6dEhxXw1ZJYuN_qCnG1cAJE02gDD4O/exec";
+
+  var DEFAULT_IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="180"><rect width="100%" height="100%" fill="#e4e8ef"/><text x="50%" y="50%" fill="#9aa3b0" font-family="sans-serif" font-size="16" text-anchor="middle" dy=".3em">圖片暫無</text></svg>');
+  var SERVICES = ['接機','送機','國內包車','國外 / 全球華人包車','一般用車'];
+  var state = { lineUserId:'', nickname:'', service:'', carTypeId:'', carTypeName:'', cars:[], modalPhotos:[], modalIdx:0 };
+
+  /* ===== JSONP：呼叫 GAS 對外 API（免 CORS、可讀回結果） ===== */
+  var _jid = 0;
+  function api(params){
+    return new Promise(function(resolve, reject){
+      var cb = 'cb_' + (++_jid) + '_' + Date.now();
+      var s;
+      var timer = setTimeout(function(){ cleanup(); reject('連線逾時，請稍後再試'); }, 20000);
+      function cleanup(){ clearTimeout(timer); try{ delete window[cb]; }catch(e){ window[cb]=undefined; } if(s && s.parentNode) s.parentNode.removeChild(s); }
+      window[cb] = function(data){ cleanup(); resolve(data); };
+      var qs = Object.keys(params).map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]==null?'':params[k]); }).join('&');
+      s = document.createElement('script');
+      s.src = GAS_URL + '?action=api&' + qs + '&callback=' + cb;
+      s.onerror = function(){ cleanup(); reject('連線失敗，請稍後再試'); };
+      document.body.appendChild(s);
+    });
+  }
+  function imgUrl(fileId){ return GAS_URL + '?action=imageProxy&fileId=' + encodeURIComponent(fileId); }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    renderServices();
+    addStopRow();
+    document.getElementById('addStop').addEventListener('click', function(){ addStopRow(); });
+    document.getElementById('submitBtn').addEventListener('click', doSubmit);
+    document.getElementById('f_date').addEventListener('change', reloadCars);
+    document.getElementById('f_time').addEventListener('change', reloadCars);
+    setInterval(function(){ if(state.service) reloadCars(); }, 60000);
+    initLine();
+  });
+
+  function setBanner(cls,msg){ document.getElementById('lineBanner').innerHTML = '<div class="banner '+cls+'">'+msg+'</div>'; }
+
+  function initLine(){
+    api({fn:'config'}).then(function(cfg){
+      if(!cfg || !cfg.liffId || typeof liff==='undefined'){
+        setBanner('warn','可直接填寫預約（從 LINE 官方帳號選單開啟可自動帶入您的資料）。'); return;
+      }
+      liff.init({liffId:cfg.liffId}).then(function(){
+        if(liff.isLoggedIn()){
+          liff.getProfile().then(function(p){
+            state.lineUserId=p.userId; state.nickname=p.displayName;
+            setBanner('ok','已綁定您的 LINE 身分：'+p.displayName);
+            prefill(p.userId);
+          }).catch(function(){ setBanner('warn','可直接填寫預約。'); });
+        } else if(typeof liff.isInClient==='function' && liff.isInClient()){
+          liff.login(); // 在 LINE App 內但未登入 → 導向授權（外部主機可正常返回）
+        } else {
+          setBanner('ok','可直接填寫預約（從 LINE 開啟可自動帶入您的資料）。');
+        }
+      }).catch(function(){ setBanner('warn','可直接填寫預約。'); });
+    }).catch(function(){ setBanner('warn','可直接填寫預約。'); });
+  }
+
+  function prefill(userId){
+    var nameEl=document.getElementById('f_name'), phoneEl=document.getElementById('f_phone');
+    if(state.nickname && !nameEl.value) nameEl.value = state.nickname; // 第一次也用 LINE 名稱
+    api({fn:'customer', userId:userId}).then(function(c){
+      if(!c || !c.ok) return;
+      if(c.name) nameEl.value = c.name;                 // 熟客以存檔姓名為準
+      if(c.phone && !phoneEl.value) phoneEl.value = c.phone;
+    });
+  }
+
+  function renderServices(){
+    var el=document.getElementById('svc'); el.innerHTML='';
+    SERVICES.forEach(function(s){
+      var b=document.createElement('button'); b.textContent=s;
+      b.onclick=function(){ state.service=s; [].forEach.call(el.children,function(x){x.classList.remove('on');}); b.classList.add('on'); reloadCars(); };
+      el.appendChild(b);
+    });
+  }
+
+  function addStopRow(val){
+    var box=document.getElementById('stops');
+    var row=document.createElement('div'); row.className='stop-row';
+    var inp=document.createElement('input'); inp.placeholder='行程點地址'; inp.value=val||'';
+    var x=document.createElement('button'); x.className='x'; x.textContent='×';
+    x.onclick=function(){ box.removeChild(row); };
+    row.appendChild(inp); row.appendChild(x); box.appendChild(row);
+  }
+
+  function reloadCars(){
+    if(!state.service){ document.getElementById('cars').innerHTML='<div class="banner">請先在上方選擇服務項目，即可看到可預約車款。</div>'; return; }
+    var d=document.getElementById('f_date').value, t=document.getElementById('f_time').value;
+    document.getElementById('cars').innerHTML='<div class="banner">載入可預約車款中…</div>';
+    api({fn:'carTypes', service:state.service, useDate:d, pickupTime:t}).then(function(r){
+      var cars = (r && r.cars) ? r.cars : [];
+      state.cars=cars;
+      var el=document.getElementById('cars');
+      if(!cars.length){ el.innerHTML='<div class="banner warn">此服務項目目前沒有可預約車款（可能皆已被預約，或尚未設定）。可換個時間或稍後再試。</div>'; state.carTypeId=''; state.carTypeName=''; return; }
+      el.innerHTML='';
+      cars.forEach(function(c){
+        var picked=(c.carTypeId===state.carTypeId);
+        var card=document.createElement('div'); card.className='car'+(picked?' on':''); card.dataset.id=c.carTypeId;
+        var meta='';
+        if(c.seats) meta+='<span>乘坐 '+c.seats+' 人</span>';
+        if(c.luggage) meta+='<span>行李 '+c.luggage+'</span>';
+        if(c.scenario) meta+='<span>'+c.scenario+'</span>';
+        card.innerHTML=
+          '<img class="cover" src="'+(c.coverFileId?imgUrl(c.coverFileId):DEFAULT_IMG)+'" onerror="this.src=\''+DEFAULT_IMG+'\'">'+
+          '<div class="body"><div class="nm">'+esc(c.name)+'</div>'+
+          '<div class="in">'+esc(c.intro||'')+'</div>'+
+          '<div class="meta">'+meta+'</div>'+
+          '<div class="btns">'+
+            '<button class="view" onclick="openGallery(\''+c.carTypeId+'\')">查看照片</button>'+
+            '<button class="pick'+(picked?' on':'')+'" onclick="pickCar(\''+c.carTypeId+'\',this)">'+(picked?'✓ 已選擇':'選擇此車款')+'</button>'+
+          '</div></div>';
+        el.appendChild(card);
+      });
+      if(state.carTypeId && !cars.some(function(c){return c.carTypeId===state.carTypeId;})){
+        state.carTypeId=''; state.carTypeName=''; document.getElementById('err').textContent='您剛才選的車款已被預約，請重新選擇。';
+      }
+    }).catch(function(e){ document.getElementById('cars').innerHTML='<div class="banner warn">車款載入失敗：'+esc(String(e))+'</div>'; });
+  }
+
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
+
+  function pickCar(id,btn){
+    state.carTypeId=id;
+    var car=state.cars.filter(function(c){return c.carTypeId===id;})[0];
+    state.carTypeName=car?car.name:'';
+    [].forEach.call(document.querySelectorAll('.car'),function(c){ c.classList.toggle('on', c.dataset.id===id); });
+    [].forEach.call(document.querySelectorAll('.car .pick'),function(b){ b.classList.remove('on'); b.textContent='選擇此車款'; });
+    btn.classList.add('on'); btn.textContent='✓ 已選擇';
+  }
+
+  function openGallery(id){
+    var car=state.cars.filter(function(c){return c.carTypeId===id;})[0];
+    if(!car) return;
+    var photos = (car.photos&&car.photos.length)?car.photos:(car.coverFileId?[{fileId:car.coverFileId,type:'封面'}]:[]);
+    if(!photos.length){ alert('此車款尚無照片'); return; }
+    state.modalPhotos=photos; state.modalIdx=0;
+    var tw=document.getElementById('modalThumbs'); tw.innerHTML='';
+    photos.forEach(function(p,i){ var t=document.createElement('img'); t.src=imgUrl(p.fileId); t.onerror=function(){this.src=DEFAULT_IMG;}; if(i===0)t.className='on'; t.onclick=function(){showPhoto(i);}; tw.appendChild(t); });
+    showPhoto(0);
+    document.getElementById('modal').classList.add('show');
+  }
+  function showPhoto(i){
+    state.modalIdx=i; var p=state.modalPhotos[i];
+    var img=document.getElementById('modalImg'); img.onerror=function(){this.src=DEFAULT_IMG;}; img.src=imgUrl(p.fileId);
+    [].forEach.call(document.getElementById('modalThumbs').children,function(t,idx){ t.classList.toggle('on',idx===i); });
+  }
+  function openOriginal(){ var p=state.modalPhotos[state.modalIdx]; if(p) window.open(imgUrl(p.fileId),'_blank'); }
+  function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+  function doSubmit(){
+    var err=document.getElementById('err');
+    if(!state.service){ err.textContent='請先選擇服務項目'; return; }
+    var name=document.getElementById('f_name').value.trim();
+    var phone=document.getElementById('f_phone').value.trim();
+    if(!name || !phone){ err.textContent='請填寫姓名與電話'; return; }
+    if(!document.getElementById('f_date').value){ err.textContent='請選擇用車日期'; return; }
+    if(!document.getElementById('f_pickup').value.trim()){ err.textContent='請填寫上車地點'; return; }
+    if(!state.carTypeId){ err.textContent='請選擇車款'; document.getElementById('cars').scrollIntoView({behavior:'smooth'}); return; }
+    var stops=[]; [].forEach.call(document.querySelectorAll('#stops input'),function(i){ if(i.value.trim()) stops.push(i.value.trim()); });
+    var params={
+      fn:'submit',
+      lineUserId:state.lineUserId, lineNickname:state.nickname, service:state.service,
+      name:name, phone:phone,
+      useDate:document.getElementById('f_date').value, pickupTime:document.getElementById('f_time').value,
+      pickup:document.getElementById('f_pickup').value.trim(), stops:JSON.stringify(stops),
+      people:document.getElementById('f_people').value, luggage:document.getElementById('f_luggage').value,
+      carTypeId:state.carTypeId, carTypeName:state.carTypeName,
+      pet:document.getElementById('f_pet').value, childSeat:document.getElementById('f_child').checked?'1':'0',
+      flightNo:document.getElementById('f_flightno').value, flightTime:document.getElementById('f_flighttime').value,
+      note:document.getElementById('f_note').value,
+      hp:document.getElementById('hp').value
+    };
+    var btn=document.getElementById('submitBtn'); btn.disabled=true; err.textContent='送出中…';
+    api(params).then(function(r){
+      btn.disabled=false;
+      if(!r || !r.ok){ err.textContent=(r&&r.message)?r.message:'送出失敗，請稍後再試'; return; }
+      err.textContent='';
+      showSuccess(r.orderId);
+    }).catch(function(e){ btn.disabled=false; err.textContent=e; });
+  }
+
+  function showSuccess(orderId){
+    document.getElementById('form').style.display='none';
+    var v=document.getElementById('successView'); v.style.display='block';
+    v.innerHTML='<div class="success"><div class="ic">✅</div><h2>您的預約需求已送出</h2>'+
+      '<p>訂單編號：'+esc(orderId)+'<br><br>專人將依照車款、路線、時間與收費規則確認費用，<br>預約需經確認後才正式成立。</p></div>';
+    window.scrollTo(0,0);
+  }
+</script>
+</body>
+</html>
