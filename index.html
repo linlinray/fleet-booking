@@ -33,7 +33,18 @@
     .cars{display:grid;gap:12px;}
     .car{border:1px solid #e4e8ef;border-radius:14px;overflow:hidden;background:#fff;}
     .car.on{border-color:#d4af37;box-shadow:0 0 0 2px #d4af37 inset;}
-    .car .cover{width:100%;height:180px;object-fit:cover;display:block;background:#e4e8ef;}
+    .car .carousel{position:relative;width:100%;padding-bottom:62.5%;background:#0d1322;overflow:hidden;}
+    .car .carousel .frame{position:absolute;inset:0;}
+    .car .carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#0d1322;}
+    .car .carousel img.on{display:block;}
+    .car .carousel .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa3b0;font-size:14px;background:#0d1322;}
+    .car .carousel .arrow{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:999px;background:rgba(0,0,0,.45);color:#fff;border:none;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0;}
+    .car .carousel .arrow.l{left:8px;} .car .carousel .arrow.r{right:8px;}
+    .car .carousel .count{position:absolute;top:8px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 9px;border-radius:999px;z-index:2;}
+    .car .carousel .label{position:absolute;left:10px;bottom:30px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 9px;border-radius:999px;z-index:2;}
+    .car .carousel .dots{position:absolute;left:0;right:0;bottom:9px;display:flex;gap:6px;justify-content:center;z-index:2;}
+    .car .carousel .dots i{width:7px;height:7px;border-radius:999px;background:rgba(255,255,255,.45);display:block;}
+    .car .carousel .dots i.on{background:#d4af37;}
     .car .body{padding:12px 14px;}
     .car .nm{font-size:16px;font-weight:800;color:#0f1b33;}
     .car .in{font-size:13px;color:#6b7480;margin:4px 0 8px;}
@@ -80,15 +91,17 @@
     <div class="sec">
       <h3>聯絡資料</h3>
       <label>姓名</label><input id="f_name" placeholder="您的稱呼" autocomplete="name">
-      <label>電話</label><input id="f_phone" type="tel" placeholder="聯絡電話" autocomplete="tel">
+      <label>電話</label><input id="f_phone" type="tel" inputmode="numeric" placeholder="聯絡電話（純數字）" autocomplete="tel">
     </div>
 
     <div class="sec">
       <h3>用車時間與地點</h3>
       <div class="grid2">
-        <div><label>用車日期</label><input id="f_date" type="date"></div>
-        <div><label>上車時間</label><input id="f_time" type="time"></div>
+        <div><label>開始用車日期</label><input id="f_date" type="date"></div>
+        <div><label>結束用車日期</label><input id="f_enddate" type="date"></div>
       </div>
+      <label>上車時間</label><input id="f_time" type="time">
+      <div style="font-size:12px;color:#888;margin-top:4px;">單日預約：結束日期可留空，或與開始用車日期選同一天。</div>
       <label>上車地點</label><input id="f_pickup" placeholder="例：台北市內湖區…">
       <label>其他行程點（可新增多個）</label>
       <div id="stops"></div>
@@ -98,8 +111,8 @@
     <div class="sec">
       <h3>人數與行李</h3>
       <div class="grid2">
-        <div><label>乘車人數</label><input id="f_people" type="number" min="1" placeholder="人數"></div>
-        <div><label>行李數</label><input id="f_luggage" type="number" min="0" placeholder="件數"></div>
+        <div><label>乘車人數</label><select id="f_people"><option value="">請選擇</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div>
+        <div><label>行李數</label><select id="f_luggage"><option value="">請選擇</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option><option>10</option></select></div>
       </div>
     </div>
 
@@ -132,15 +145,6 @@
   </div>
 
   <div id="successView" style="display:none;"></div>
-</div>
-
-<div class="modal" id="modal">
-  <img id="modalImg" src="">
-  <div class="thumbs" id="modalThumbs"></div>
-  <div class="row">
-    <button onclick="openOriginal()">查看原圖</button>
-    <button onclick="closeModal()">關閉</button>
-  </div>
 </div>
 
 <script>
@@ -177,6 +181,8 @@
     document.getElementById('submitBtn').addEventListener('click', doSubmit);
     document.getElementById('f_date').addEventListener('change', reloadCars);
     document.getElementById('f_time').addEventListener('change', reloadCars);
+    document.getElementById('f_enddate').addEventListener('change', reloadCars);
+    var ph=document.getElementById('f_phone'); ph.addEventListener('input', function(){ var v=this.value.replace(/[^0-9]/g,''); if(this.value!==v)this.value=v; });
     setInterval(function(){ if(state.service) reloadCars(); }, 60000);
     initLine();
   });
@@ -235,8 +241,9 @@
   function reloadCars(){
     if(!state.service){ document.getElementById('cars').innerHTML='<div class="banner">請先在上方選擇服務項目，即可看到可預約車款。</div>'; return; }
     var d=document.getElementById('f_date').value, t=document.getElementById('f_time').value;
+    var ed=document.getElementById('f_enddate')?document.getElementById('f_enddate').value:'';
     document.getElementById('cars').innerHTML='<div class="banner">載入可預約車款中…</div>';
-    api({fn:'carTypes', service:state.service, useDate:d, pickupTime:t}).then(function(r){
+    api({fn:'carTypes', service:state.service, useDate:d, endDate:ed, pickupTime:t}).then(function(r){
       var cars = (r && r.cars) ? r.cars : [];
       state.cars=cars;
       var el=document.getElementById('cars');
@@ -248,14 +255,14 @@
         var meta='';
         if(c.seats) meta+='<span>乘坐 '+c.seats+' 人</span>';
         if(c.luggage) meta+='<span>行李 '+c.luggage+'</span>';
+        if(c.luggageMax) meta+='<span>行李上限 '+c.luggageMax+' 件</span>';
         if(c.scenario) meta+='<span>'+c.scenario+'</span>';
         card.innerHTML=
-          '<img class="cover" src="'+(c.coverFileId?imgUrl(c.coverFileId):DEFAULT_IMG)+'" onerror="this.src=\''+DEFAULT_IMG+'\'">'+
+          carCarousel(c)+
           '<div class="body"><div class="nm">'+esc(c.name)+'</div>'+
           '<div class="in">'+esc(c.intro||'')+'</div>'+
           '<div class="meta">'+meta+'</div>'+
           '<div class="btns">'+
-            '<button class="view" onclick="openGallery(\''+c.carTypeId+'\')">查看照片</button>'+
             '<button class="pick'+(picked?' on':'')+'" onclick="pickCar(\''+c.carTypeId+'\',this)">'+(picked?'✓ 已選擇':'選擇此車款')+'</button>'+
           '</div></div>';
         el.appendChild(card);
@@ -264,6 +271,35 @@
         state.carTypeId=''; state.carTypeName=''; document.getElementById('err').textContent='您剛才選的車款已被預約，請重新選擇。';
       }
     }).catch(function(e){ document.getElementById('cars').innerHTML='<div class="banner warn">車款載入失敗：'+esc(String(e))+'</div>'; });
+  }
+
+  /* 車款卡片內建照片輪播：固定比例框 + object-fit:contain（比例不失常、不被裁切） */
+  function carCarousel(c){
+    var photos=(c.photos&&c.photos.length)?c.photos:(c.coverFileId?[{fileId:c.coverFileId,type:''}]:[]);
+    if(!photos.length){
+      return '<div class="carousel"><div class="frame"><div class="ph">車款照片準備中</div></div></div>';
+    }
+    var imgs=photos.map(function(p,i){ return '<img'+(i===0?' class="on"':'')+' data-type="'+esc(p.type||'')+'" src="'+imgUrl(p.fileId)+'" onerror="this.src=\''+DEFAULT_IMG+'\'">'; }).join('');
+    var label0=photos[0].type?esc(photos[0].type):'';
+    var nav='';
+    if(photos.length>1){
+      var dots=photos.map(function(p,i){ return '<i'+(i===0?' class="on"':'')+'></i>'; }).join('');
+      nav='<button type="button" class="arrow l" onclick="carNav(this,-1)">‹</button>'+
+          '<button type="button" class="arrow r" onclick="carNav(this,1)">›</button>'+
+          '<div class="count">1/'+photos.length+'</div>'+
+          '<div class="dots">'+dots+'</div>';
+    }
+    return '<div class="carousel"><div class="frame">'+imgs+'</div>'+nav+
+           '<div class="label" style="'+(label0?'':'display:none;')+'">'+label0+'</div></div>';
+  }
+  function carNav(btn,dir){
+    var car=btn.parentNode; var imgs=car.querySelectorAll('.frame img'); var n=imgs.length; if(n<2)return;
+    var cur=-1; [].forEach.call(imgs,function(im,idx){ if(im.classList.contains('on'))cur=idx; }); if(cur<0)cur=0;
+    var i=(cur+dir+n)%n;
+    [].forEach.call(imgs,function(im,idx){ im.classList.toggle('on',idx===i); });
+    var dots=car.querySelectorAll('.dots i'); [].forEach.call(dots,function(dd,idx){ dd.classList.toggle('on',idx===i); });
+    var cnt=car.querySelector('.count'); if(cnt)cnt.textContent=(i+1)+'/'+n;
+    var lbl=car.querySelector('.label'); if(lbl){ var ty=imgs[i].getAttribute('data-type')||''; lbl.textContent=ty; lbl.style.display=ty?'block':'none'; }
   }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
@@ -277,40 +313,26 @@
     btn.classList.add('on'); btn.textContent='✓ 已選擇';
   }
 
-  function openGallery(id){
-    var car=state.cars.filter(function(c){return c.carTypeId===id;})[0];
-    if(!car) return;
-    var photos = (car.photos&&car.photos.length)?car.photos:(car.coverFileId?[{fileId:car.coverFileId,type:'封面'}]:[]);
-    if(!photos.length){ alert('此車款尚無照片'); return; }
-    state.modalPhotos=photos; state.modalIdx=0;
-    var tw=document.getElementById('modalThumbs'); tw.innerHTML='';
-    photos.forEach(function(p,i){ var t=document.createElement('img'); t.src=imgUrl(p.fileId); t.onerror=function(){this.src=DEFAULT_IMG;}; if(i===0)t.className='on'; t.onclick=function(){showPhoto(i);}; tw.appendChild(t); });
-    showPhoto(0);
-    document.getElementById('modal').classList.add('show');
-  }
-  function showPhoto(i){
-    state.modalIdx=i; var p=state.modalPhotos[i];
-    var img=document.getElementById('modalImg'); img.onerror=function(){this.src=DEFAULT_IMG;}; img.src=imgUrl(p.fileId);
-    [].forEach.call(document.getElementById('modalThumbs').children,function(t,idx){ t.classList.toggle('on',idx===i); });
-  }
-  function openOriginal(){ var p=state.modalPhotos[state.modalIdx]; if(p) window.open(imgUrl(p.fileId),'_blank'); }
-  function closeModal(){ document.getElementById('modal').classList.remove('show'); }
-
   function doSubmit(){
     var err=document.getElementById('err');
     if(!state.service){ err.textContent='請先選擇服務項目'; return; }
     var name=document.getElementById('f_name').value.trim();
-    var phone=document.getElementById('f_phone').value.trim();
+    var phone=document.getElementById('f_phone').value.replace(/[^0-9]/g,'');
     if(!name || !phone){ err.textContent='請填寫姓名與電話'; return; }
-    if(!document.getElementById('f_date').value){ err.textContent='請選擇用車日期'; return; }
+    var sd=document.getElementById('f_date').value, ued=document.getElementById('f_enddate').value;
+    if(!sd){ err.textContent='請選擇開始用車日期'; return; }
+    if(ued && ued<sd){ err.textContent='結束用車日期不可早於開始用車日期'; return; }
     if(!document.getElementById('f_pickup').value.trim()){ err.textContent='請填寫上車地點'; return; }
     if(!state.carTypeId){ err.textContent='請選擇車款'; document.getElementById('cars').scrollIntoView({behavior:'smooth'}); return; }
+    var selCar=state.cars.filter(function(c){return c.carTypeId===state.carTypeId;})[0];
+    var lugVal=parseInt(document.getElementById('f_luggage').value||'0',10);
+    if(selCar && selCar.luggageMax && !isNaN(lugVal) && lugVal>Number(selCar.luggageMax)){ err.textContent='此車款行李容量上限為 '+selCar.luggageMax+' 件，請改選其他車款或減少行李件數'; return; }
     var stops=[]; [].forEach.call(document.querySelectorAll('#stops input'),function(i){ if(i.value.trim()) stops.push(i.value.trim()); });
     var params={
       fn:'submit',
       lineUserId:state.lineUserId, lineNickname:state.nickname, service:state.service,
       name:name, phone:phone,
-      useDate:document.getElementById('f_date').value, pickupTime:document.getElementById('f_time').value,
+      useDate:sd, endDate:(ued||sd), pickupTime:document.getElementById('f_time').value,
       pickup:document.getElementById('f_pickup').value.trim(), stops:JSON.stringify(stops),
       people:document.getElementById('f_people').value, luggage:document.getElementById('f_luggage').value,
       carTypeId:state.carTypeId, carTypeName:state.carTypeName,
