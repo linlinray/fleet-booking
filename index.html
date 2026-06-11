@@ -272,6 +272,7 @@
       if(state.carTypeId && !cars.some(function(c){return c.carTypeId===state.carTypeId;})){
         state.carTypeId=''; state.carTypeName=''; document.getElementById('err').textContent='您剛才選的車款已被預約，請重新選擇。';
       }
+      loadVisibleCarImgs();
     }).catch(function(e){
       if(!_carsRetried){ _carsRetried=true; document.getElementById('cars').innerHTML='<div class="banner">連線中，正在重試…</div>'; setTimeout(reloadCars,1800); return; }
       _carsRetried=false;
@@ -285,7 +286,7 @@
     if(!photos.length){
       return '<div class="carousel"><div class="frame"><div class="ph">車款照片準備中</div></div></div>';
     }
-    var imgs=photos.map(function(p,i){ return '<img'+(i===0?' class="on"':'')+' data-type="'+esc(p.type||'')+'" src="'+imgUrl(p.fileId)+'" onerror="this.src=\''+DEFAULT_IMG+'\'">'; }).join('');
+    var imgs=photos.map(function(p,i){ return '<img'+(i===0?' class="on"':'')+' data-type="'+esc(p.type||'')+'" data-fid="'+esc(p.fileId)+'" alt="">'; }).join('');
     var label0=photos[0].type?esc(photos[0].type):'';
     var nav='';
     if(photos.length>1){
@@ -303,10 +304,18 @@
     var cur=-1; [].forEach.call(imgs,function(im,idx){ if(im.classList.contains('on'))cur=idx; }); if(cur<0)cur=0;
     var i=(cur+dir+n)%n;
     [].forEach.call(imgs,function(im,idx){ im.classList.toggle('on',idx===i); });
+    loadCarImg(imgs[i]);
     var dots=car.querySelectorAll('.dots i'); [].forEach.call(dots,function(dd,idx){ dd.classList.toggle('on',idx===i); });
     var cnt=car.querySelector('.count'); if(cnt)cnt.textContent=(i+1)+'/'+n;
     var lbl=car.querySelector('.label'); if(lbl){ var ty=imgs[i].getAttribute('data-type')||''; lbl.textContent=ty; lbl.style.display=ty?'block':'none'; }
   }
+  /* 用 base64 逐張載入車款照片（GAS 無法直接當 <img> 圖檔，改走對外取圖 API） */
+  var _imgCache={};
+  function loadCarImg(img){ if(!img)return; var fid=img.getAttribute('data-fid'); if(!fid||img.getAttribute('data-loaded')==='1')return;
+    if(_imgCache[fid]){ img.src=_imgCache[fid]; img.setAttribute('data-loaded','1'); return; }
+    img.setAttribute('data-loaded','1');
+    api({fn:'image', fileId:fid}).then(function(r){ if(r&&r.ok&&r.uri){ _imgCache[fid]=r.uri; img.src=r.uri; } else { img.src=DEFAULT_IMG; } }).catch(function(){ img.removeAttribute('data-loaded'); img.src=DEFAULT_IMG; }); }
+  function loadVisibleCarImgs(){ [].forEach.call(document.querySelectorAll('#cars .carousel .frame img.on'),loadCarImg); }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
 
