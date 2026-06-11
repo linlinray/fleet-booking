@@ -33,11 +33,11 @@
     .cars{display:grid;gap:12px;}
     .car{border:1px solid #e4e8ef;border-radius:14px;overflow:hidden;background:#fff;}
     .car.on{border-color:#d4af37;box-shadow:0 0 0 2px #d4af37 inset;}
-    .car .carousel{position:relative;width:100%;padding-bottom:62.5%;background:#0d1322;overflow:hidden;}
-    .car .carousel .frame{position:absolute;inset:0;}
-    .car .carousel img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;background:#0d1322;}
+    .car .carousel{position:relative;width:100%;height:0;padding-bottom:62.5%;background:#0d1322;overflow:hidden;}
+    .car .carousel .frame{position:absolute;top:0;left:0;right:0;bottom:0;width:100%;height:100%;}
+    .car .carousel img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;display:none;background:#0d1322;}
     .car .carousel img.on{display:block;}
-    .car .carousel .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9aa3b0;font-size:14px;background:#0d1322;}
+    .car .carousel .ph{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#9aa3b0;font-size:14px;background:#0d1322;}
     .car .carousel .arrow{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:999px;background:rgba(0,0,0,.45);color:#fff;border:none;font-size:22px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2;padding:0;}
     .car .carousel .arrow.l{left:8px;} .car .carousel .arrow.r{right:8px;}
     .car .carousel .count{position:absolute;top:8px;right:10px;background:rgba(0,0,0,.55);color:#fff;font-size:12px;padding:2px 9px;border-radius:999px;z-index:2;}
@@ -238,12 +238,14 @@
     row.appendChild(inp); row.appendChild(x); box.appendChild(row);
   }
 
+  var _carsRetried=false;
   function reloadCars(){
     if(!state.service){ document.getElementById('cars').innerHTML='<div class="banner">請先在上方選擇服務項目，即可看到可預約車款。</div>'; return; }
     var d=document.getElementById('f_date').value, t=document.getElementById('f_time').value;
     var ed=document.getElementById('f_enddate')?document.getElementById('f_enddate').value:'';
     document.getElementById('cars').innerHTML='<div class="banner">載入可預約車款中…</div>';
     api({fn:'carTypes', service:state.service, useDate:d, endDate:ed, pickupTime:t}).then(function(r){
+      _carsRetried=false;
       var cars = (r && r.cars) ? r.cars : [];
       state.cars=cars;
       var el=document.getElementById('cars');
@@ -270,7 +272,11 @@
       if(state.carTypeId && !cars.some(function(c){return c.carTypeId===state.carTypeId;})){
         state.carTypeId=''; state.carTypeName=''; document.getElementById('err').textContent='您剛才選的車款已被預約，請重新選擇。';
       }
-    }).catch(function(e){ document.getElementById('cars').innerHTML='<div class="banner warn">車款載入失敗：'+esc(String(e))+'</div>'; });
+    }).catch(function(e){
+      if(!_carsRetried){ _carsRetried=true; document.getElementById('cars').innerHTML='<div class="banner">連線中，正在重試…</div>'; setTimeout(reloadCars,1800); return; }
+      _carsRetried=false;
+      document.getElementById('cars').innerHTML='<div class="banner warn">車款載入失敗：'+esc(String(e))+'<br>請稍候幾秒後重新整理頁面。若一直失敗，多半是後端部署的「誰可以存取」沒設成「任何人」。</div>';
+    });
   }
 
   /* 車款卡片內建照片輪播：固定比例框 + object-fit:contain（比例不失常、不被裁切） */
