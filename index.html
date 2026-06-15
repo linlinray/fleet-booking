@@ -98,7 +98,7 @@
     <div class="t">啟程於台灣，<b>引領至全球</b></div>
     <div class="s">高端轎車・商務車・保母車到巴士，專人為您確認車款、路線、時間與費用。</div>
     <div class="badges"><span class="tb">24h 即時應變</span><span class="tb">多語接待</span><span class="tb">隱私保密</span><span class="tb">合法營運</span><span class="tb">全球華人車隊</span></div>
-    <div class="svctags"><span>機場接送</span><span>包車</span><span>商務接待</span><span>家庭出遊</span><span>貴賓接待</span></div>
+    <div class="svctags" id="svctags"></div>
   </div>
   <div id="lineBanner"></div>
 
@@ -197,6 +197,7 @@
   document.addEventListener('DOMContentLoaded', function(){
     renderServices();
     addStopRow();
+    var _td=todayStr_(); var _d1=document.getElementById('f_date'), _d2=document.getElementById('f_enddate'); if(_d1)_d1.min=_td; if(_d2)_d2.min=_td;
     document.getElementById('addStop').addEventListener('click', function(){ addStopRow(); });
     document.getElementById('submitBtn').addEventListener('click', doSubmit);
     document.getElementById('f_date').addEventListener('change', reloadCars);
@@ -248,7 +249,9 @@
       b.onclick=function(){ state.service=s; [].forEach.call(el.children,function(x){x.classList.remove('on');}); b.classList.add('on'); reloadCars(); };
       el.appendChild(b);
     });
+    var tg=document.getElementById('svctags'); if(tg) tg.innerHTML=SERVICES.map(function(s){return '<span>'+esc(s)+'</span>';}).join('');
   }
+  function todayStr_(){ var d=new Date(),m=d.getMonth()+1,dd=d.getDate(); return d.getFullYear()+'-'+(m<10?'0'+m:m)+'-'+(dd<10?'0'+dd:dd); }
 
   function addStopRow(val){
     var box=document.getElementById('stops');
@@ -358,6 +361,8 @@
     var sd=document.getElementById('f_date').value, ued=document.getElementById('f_enddate').value;
     if(!sd){ err.textContent='請選擇開始用車日期'; return; }
     if(ued && ued<sd){ err.textContent='結束用車日期不可早於開始用車日期'; return; }
+    if(sd<todayStr_()){ err.textContent='開始用車日期不可早於今天'; return; }
+    if(!document.getElementById('f_time').value){ err.textContent='請選擇上車時間'; return; }
     if(!document.getElementById('f_pickup').value.trim()){ err.textContent='請填寫上車地點'; return; }
     if(!state.carTypeId){ err.textContent='請選擇車款'; document.getElementById('cars').scrollIntoView({behavior:'smooth'}); return; }
     var selCar=state.cars.filter(function(c){return c.carTypeId===state.carTypeId;})[0];
