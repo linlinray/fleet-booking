@@ -333,12 +333,12 @@
     var cnt=car.querySelector('.count'); if(cnt)cnt.textContent=(i+1)+'/'+n;
     var lbl=car.querySelector('.label'); if(lbl){ var ty=imgs[i].getAttribute('data-type')||''; lbl.textContent=ty; lbl.style.display=ty?'block':'none'; }
   }
-  /* 用 base64 逐張載入車款照片（GAS 無法直接當 <img> 圖檔，改走對外取圖 API） */
+  /* 車款照片：直接用 Drive 縮圖網址載入（瀏覽器並行抓取、自動快取，不佔 GAS）；失敗退預設圖 */
   var _imgCache={};
   function loadCarImg(img){ if(!img)return; var fid=img.getAttribute('data-fid'); if(!fid||img.getAttribute('data-loaded')==='1')return;
-    if(_imgCache[fid]){ img.src=_imgCache[fid]; img.setAttribute('data-loaded','1'); return; }
     img.setAttribute('data-loaded','1');
-    api({fn:'image', fileId:fid}).then(function(r){ if(r&&r.ok&&r.uri){ _imgCache[fid]=r.uri; img.src=r.uri; } else { img.src=DEFAULT_IMG; } }).catch(function(){ img.removeAttribute('data-loaded'); img.src=DEFAULT_IMG; }); }
+    img.onerror=function(){ img.onerror=null; img.src=DEFAULT_IMG; };
+    img.src='https://drive.google.com/thumbnail?id='+encodeURIComponent(fid)+'&sz=w800'; }
   function loadVisibleCarImgs(){ [].forEach.call(document.querySelectorAll('#cars .carousel .frame img.on'),loadCarImg); }
 
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];}); }
